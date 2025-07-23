@@ -17,7 +17,7 @@ import requests
 from io import BytesIO
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from datetime import datetime
+
 
 def extract_text_from_image(image_url):
     try:
@@ -52,23 +52,34 @@ def tinh_thoi_gian(thoi_gian_text):
     except Exception as e:
         print(f"Lỗi khi chuyển đổi chuỗi thời gian: {str(e)}")
         return None
-# directory
-def get_now():
-    return datetime.today().strftime('%d-%m')
-def save_to_excel(data, directory="Bài viết/Nhật Bản/Tokutei/"+get_now()): 
-    thoi_gian_ht = datetime.now()
-    ten_file_excel = f"nhom_01_{thoi_gian_ht.strftime('%Y-%m-%d %H-%M-%S').replace(' ', '-')}.xlsx"
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    filepath = os.path.join(directory, ten_file_excel)
-    df = pd.DataFrame(data)
-    df.to_excel(filepath, index=False)
-    print(f"Dữ liệu đã được lưu vào tệp {filepath}.")
 
-driver_path = 'C:\chromedriver\chromedriver.exe'
-service = Service(driver_path)
-driver = webdriver.Chrome(service=service)
+# def save_to_excel(data, directory="Bài viết/Nhật Bản/TC/11-7"):
+#     thoi_gian_ht = datetime.now()
+#     ten_file_excel = f"nhom_01_{thoi_gian_ht.strftime('%Y-%m-%d %H-%M-%S').replace(' ', '-')}.xlsx"
+#     if not os.path.exists(directory):
+#         os.makedirs(directory)
+#     filepath = os.path.join(directory, ten_file_excel)
+#     df = pd.DataFrame(data)
+#     df.to_excel(filepath, index=False)
+#     print(f"Dữ liệu đã được lưu vào tệp {filepath}.")
 
+def save_to_gg_sheet(data, spreadsheet_id, sheet_name):
+    try:
+        service = build('sheets', 'v4', credentials=creds)
+        body = {
+            'values': [list(item.values()) for item in data]
+        }
+        result = service.spreadsheets().values().append(
+            spreadsheetId=spreadsheet_id,
+            range=f'{sheet_name}!A2',
+            valueInputOption='RAW',
+            body=body
+        ).execute()
+        print(f"{result.get('updates').get('updatedCells')} cells updated.")
+    except Exception as e:
+        print(f"Lỗi khi lưu dữ liệu vào Google Sheets: {str(e)}")
+
+driver = webdriver.Chrome()
 url = "https://www.facebook.com/"
 driver.get(url)
 
@@ -79,18 +90,17 @@ driver.refresh()
 
 url_profiles = "https://www.facebook.com/profile.php?id="
 
-creds = service_account.Credentials.from_service_account_file('api_sheet.json')
+creds = service_account.Credentials.from_service_account_file('hellojobv5-bbd1a88506df.json')
 service = build('sheets', 'v4', credentials=creds)
 
 spreadsheet_id = '10SL6WCt6YPrHUtxzVmsNI1futs-SOi9ebYIn_C641vc'
-# sheet tab
-sheet_name = 'Tokutei mới'
+sheet_name = 'Nhóm TTS'
 range_name = f'{sheet_name}!B2:B'
 result = service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
 values = result.get('values', [])   
-# size
-tu_hang = 2
-den_hang = 50
+
+tu_hang = 3
+den_hang = 10
 
 for i, row in enumerate(values[tu_hang-2:den_hang-1], start=tu_hang):  
     driver.get(row[0] + "?sorting_setting=CHRONOLOGICAL")
@@ -113,17 +123,7 @@ for i, row in enumerate(values[tu_hang-2:den_hang-1], start=tu_hang):
 
         for div_element in div_elements[count:]:
             try:
-                # url_bai_viet_elem = WebDriverWait(div_element, 20).until(
-                #     EC.visibility_of_element_located(
-                #         (By.CSS_SELECTOR, 'div[class="html-div xdj266r x11i5rnm xat24cr x1mh8g0r xexx8yu x4uap5 x18d9i69 xkhd6sd x1q0g3np"] span span span a[role="link"]'))
-                # )
                 allLinksInBlock=div_element.find_elements(By.CSS_SELECTOR, 'a[role="link"]')
-                # allLinksInBlock = WebDriverWait(div_element, 20).until(
-                #     EC.visibility_of_all_elements_located(
-                #         (By.CSS_SELECTOR, 'a[role="link"]'))
-                # )
-                # for link in allLinksInBlock:
-
                 driver.execute_script(
                     "arguments[0].scrollIntoView({block: 'center', inline: 'center'});", allLinksInBlock[0])
                 ten_nguoi_dung = ""
@@ -168,11 +168,11 @@ for i, row in enumerate(values[tu_hang-2:den_hang-1], start=tu_hang):
                 except Exception as e:
                     thoi_gian = ""
                 thoi_gian_text = thoi_gian
-                #tinh thời gian
+
                 if thoi_gian:
                     thoi_gian_parsed = tinh_thoi_gian(thoi_gian)
                     thoi_gian = int(thoi_gian_parsed.timestamp())
-                    if thoi_gian_parsed and int(thoi_gian_parsed.timestamp()) <= 1752629940:
+                    if thoi_gian_parsed and int(thoi_gian_parsed.timestamp()) <= 1751940000:
                         flag = True
                         break
                 else:
@@ -191,59 +191,10 @@ for i, row in enumerate(values[tu_hang-2:den_hang-1], start=tu_hang):
                         EC.presence_of_element_located((By.CSS_SELECTOR, 'div.__fb-light-mode [role="dialog"] [role="dialog"],div.__fb-dark-mode [role="dialog"] [role="dialog"]'))
                     )
 
-                    # if not ten_nguoi_dung:
-                    #     try:
-                    #         ten_nguoi_dung_text = content_element.find_elements(By.CSS_SELECTOR, 'div.html-div.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1q0g3np span span span span siv span')
-                    #         for ten_nguoi_dung_i in ten_nguoi_dung_text:
-                    #             ten_nguoi_dung = ten_nguoi_dung_i.text
-                    #     except Exception as e:
-                    #         ten_nguoi_dung = ""
-                    
-                    # if ten_nguoi_dung == "":
-                    #     ten_nguoi_dung = "Người tham gia ẩn danh"
-                    
-                    # if not url_nguoi_dung:
-                    #     try:
-                    #         url_nguoi_dung_text = content_element.find_elements(By.CSS_SELECTOR, 'div.html-div.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1q0g3np span span span span a')
-                    #         if url_nguoi_dung_text: 
-                    #             url_nguoi_dung = url_nguoi_dung_text[0].get_attribute("href")
-                    #             if "Người tham gia ẩn danh" in ten_nguoi_dung:
-                    #                 url_nguoi_dung = ""
-                    #     except Exception as e:
-                    #         url_nguoi_dung = ""
-                    
-                    # if url_nguoi_dung:
-                    #     match = re.search(r'/user/(\d+)', url_nguoi_dung)
-                    #     if match:
-                    #         url_profile = url_profiles + match.group(1)
-                    #     else:
-                    #         url_profile = ""
-                    # else:
-                    #     url_profile = ""
-
-                    # if not so_comment:
-                    #     try:
-                    #         so_comment_elem = content_element.find_element(By.CSS_SELECTOR, 'span.html-span.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1hl2dhg.x16tdsg8.x1vvkbs.xkrqix3.x1sur9pj')
-                    #         so_comment = so_comment_elem.text
-                    #     except Exception as e:
-                    #         so_comment = ""
-
                     try:
                         noi_dung_elem = content_element.find_element(By.CSS_SELECTOR, '[data-ad-rendering-role="story_message"]')
                         noi_dung=noi_dung_elem.text
                         print("Nội dung:", {noi_dung})
-
-                        # lines = noi_dung_elem.find_elements(By.CSS_SELECTOR, '')
-                        # if len(lines) == 1:
-                        #     noi_dung = noi_dung_elem[0].text
-                        #     print("1.1")
-                        # elif len(noi_dung_elem) > 1:
-                        #     noi_dung = noi_dung_elem[0].text
-                        #     print("1.9")
-                        # else:
-                        #     noi_dung_elem_1 = content_element.find_elements(By.CSS_SELECTOR, 'div.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.x1vvkbs.x126k92a div')
-                        #     noi_dung = " ".join([element.text for element in noi_dung_elem_1])
-                        #     print("1.2")
                     except Exception as e:
                         noi_dung = ""
                     if not noi_dung:
@@ -311,15 +262,13 @@ for i, row in enumerate(values[tu_hang-2:den_hang-1], start=tu_hang):
                         'Thời gian': thoi_gian,
                         'Ngày tháng năm': thoi_gian_text
                     }
-                    ten_loai = ["thanh giang", "giang nam", "bé như", "du học",
-                                "an an tokutei", "hường jp", "vân hana", "anh mai", "sĩ ong thế", "suka chan"
-                                ]
-                    if any(name in ten_nguoi_dung.lower() for name in ten_loai):
-                        print("Tên người dùng trùng với tên trong danh sách.")
+
+                    if ten_nguoi_dung.lower() == "người tham gia ẩn danh":
+                        print("Bỏ qua tên người dùng ẩn danh.")
                     else:
                         groups_data.append(group_data)
-                        print("Tên người dùng không trùng với tên trong danh sách.")
-
+                        print("Đã thêm dữ liệu vào danh sách.")
+                        save_to_gg_sheet(groups_data, '1aODVvOgq8FMICubdRDyKXMyY8HkYL9gmTgC-Bl7-wkU', 'Trang tính1')
                 except Exception as e:
                     print(f"Lỗi khi tìm phần tử trong đường dẫn {url_bai_viet}: {str(e)}")
 
@@ -340,8 +289,7 @@ for i, row in enumerate(values[tu_hang-2:den_hang-1], start=tu_hang):
     for group in groups_data:
         print(group)
 
-    if len(groups_data) > 0:
-        save_to_excel(groups_data)
+    # if len(groups_data) > 0:
+        # save_to_excel(groups_data)
 
-# Đóng trình duyệt khi kết thúc
 driver.quit()
